@@ -3,7 +3,7 @@
 part of 'entities.dart';
 
 // **************************************************************************
-// IsarCollectionGenerator
+// IsarCollectionGenerator rod
 // **************************************************************************
 
 // coverage:ignore-file
