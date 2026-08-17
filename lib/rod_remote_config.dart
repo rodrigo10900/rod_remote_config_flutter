@@ -38,7 +38,7 @@ class RodRemoteConfig {
     );
     try {
       final responseString = await dio.get(configUrl);
-      jsonDecode(responseString.data.toString());
+      jsonDecode(responseString.data);
       final remoteConfigData = RemoteConfigDataEnt()
         ..timestamp = DateTime.now().millisecondsSinceEpoch
         ..data = responseString.data.toString();
