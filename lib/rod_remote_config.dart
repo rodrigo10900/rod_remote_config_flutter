@@ -1,27 +1,32 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:isar_community/isar.dart';
 import 'package:path_provider/path_provider.dart';
-import 'entities.dart';
+import 'package:rod_remote_config/entities.dart';
 
 /// A Calculator.
 class RodRemoteConfig {
+  static const FILE_NAME = 'rod_remote_config_data.json';
   String? _configUrl;
   Duration? _cacheDuration;
-  final List<CollectionSchema> schemas = [RemoteConfigDataEntSchema];
-  late final Future<Isar> _db;
+  File? _file;
 
   RodRemoteConfig() {
-    _db = _openDb();
+    _init();
   }
 
-  Future<Isar> _openDb() async {
-    if (Isar.instanceNames.isNotEmpty) {
-      return Future.value(Isar.getInstance());
-    }
+  Future<void> _init() async {
+    _file = await _openFile();
+  }
+
+  Future<File?> _openFile() async {
     final dir = await getApplicationDocumentsDirectory();
-    return await Isar.open(schemas, directory: dir.path);
+    final file = File('${dir.path}/$FILE_NAME');
+    if (!await file.exists()) {
+      await file.create();
+    }
+    return file;
   }
 
   /// Fetches the remote configuration data from the specified URL and stores it in the local database.
@@ -30,7 +35,6 @@ class RodRemoteConfig {
   Future<bool> fetchConfig({required String configUrl, required Duration cacheDuration}) async {
     _configUrl = configUrl;
     _cacheDuration = cacheDuration;
-    final isar = await _db;
     final Dio dio = Dio(
       BaseOptions(
         baseUrl: configUrl,
@@ -43,24 +47,18 @@ class RodRemoteConfig {
       final remoteConfigData = RemoteConfigDataEnt()
         ..timestamp = DateTime.now().millisecondsSinceEpoch
         ..data = jsonEncode(responseString.data);
-      final existingConfig = await isar.remoteConfigDataEnts
-          .where()
-          .findFirst();
+      final existingConfig = await _file?.lastModified();
       final durationInMillis = _cacheDuration!.inMilliseconds;
       if (existingConfig != null) {
         final timeDifference =
             DateTime.now().millisecondsSinceEpoch -
-            (existingConfig.timestamp ?? 0);
+            existingConfig.millisecondsSinceEpoch;
         if (timeDifference < durationInMillis) {
           return false; 
         }
-        await isar.writeTxn(() async {
-          await isar.remoteConfigDataEnts.put(remoteConfigData);
-        });
+        await _file?.writeAsString(remoteConfigData.toJson());
       } else {
-        await isar.writeTxn(() async {
-          await isar.remoteConfigDataEnts.put(remoteConfigData);
-        });
+        await _file?.writeAsString(remoteConfigData.toJson());
       }
     } catch (e) {
       final message = e is FormatException ? "Error de formato en el archivo de configuración JSON: ${e.message}" : e.toString();
@@ -206,11 +204,10 @@ class RodRemoteConfig {
   }
 
   Future<T?> _getValue<T>(String key) async {
-    final isar = await _db;
     try {
-      final existingConfig = await isar.remoteConfigDataEnts.where().findFirst();
-      if (existingConfig != null) {
-        final data = jsonDecode(existingConfig.data ?? '{}');
+      if (_file != null && await _file!.exists()) {
+        final content = await _file!.readAsString();
+        final data = jsonDecode(content.isNotEmpty ? content : '{}');
         if (data.containsKey(key)) {
           return data[key] as T?;
         }

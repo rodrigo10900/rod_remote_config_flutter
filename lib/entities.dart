@@ -1,10 +1,23 @@
-import 'package:isar_community/isar.dart';
+import 'dart:convert';
 
-part 'entities.g.dart';
-
-@collection
 class RemoteConfigDataEnt {
-  Id id = Isar.autoIncrement;
   int? timestamp;
   String? data;
+
+  RemoteConfigDataEnt({this.timestamp, this.data});
+
+  String toJson() {
+    return jsonEncode({
+      'timestamp': timestamp,
+      'data': data,
+    });
+  }
+
+  factory RemoteConfigDataEnt.fromJson(String jsonString) {
+    final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
+    return RemoteConfigDataEnt(
+      timestamp: jsonMap['timestamp'],
+      data: jsonMap['data'],
+    );
+  }
 }
