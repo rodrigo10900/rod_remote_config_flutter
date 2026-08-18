@@ -31,8 +31,11 @@ class RodRemoteConfig {
 
   /// Fetches the remote configuration data from the specified URL and stores it in the local database.
   /// If the data is already present and the cache duration has not expired, it will not fetch the data again.
-  /// @returns A Future that resolves to true if the data was fetched and stored, or false if the data was already present and the cache duration has not expired.  
-  Future<bool> fetchConfig({required String configUrl, required Duration cacheDuration}) async {
+  /// @returns A Future that resolves to true if the data was fetched and stored, or false if the data was already present and the cache duration has not expired.
+  Future<bool> fetchConfig({
+    required String configUrl,
+    required Duration cacheDuration,
+  }) async {
     _configUrl = configUrl;
     _cacheDuration = cacheDuration;
     final Dio dio = Dio(
@@ -54,21 +57,21 @@ class RodRemoteConfig {
             DateTime.now().millisecondsSinceEpoch -
             existingConfig.millisecondsSinceEpoch;
         if (timeDifference < durationInMillis) {
-          return false; 
+          return false;
         }
         await _file?.writeAsString(remoteConfigData.toJson());
       } else {
         await _file?.writeAsString(remoteConfigData.toJson());
       }
     } catch (e) {
-      final message = e is FormatException ? "Error de formato en el archivo de configuración JSON: ${e.message}" : e.toString();
-      throw Exception(
-        message,
-      );
+      final message = e is FormatException
+          ? "Error de formato en el archivo de configuración JSON: ${e.message}"
+          : e.toString();
+      throw Exception(message);
     } finally {
       dio.close();
     }
-    return true; 
+    return true;
   }
 
   /// Retrieves the value associated with the given key from the remote configuration data.
@@ -132,7 +135,10 @@ class RodRemoteConfig {
   /// @param key The key whose value is to be retrieved.
   /// @param defaultValue The default value to return if the key does not exist or an error occurs.
   /// @returns A Future that resolves to the value associated with the key, or the default value if the key does not exist or an error occurs.
-  Future<Map<String, dynamic>> getJsonValueDefault(String key, Map<String, dynamic> defaultValue) async {
+  Future<Map<String, dynamic>> getJsonValueDefault(
+    String key,
+    Map<String, dynamic> defaultValue,
+  ) async {
     try {
       final value = await _getValue<Map<String, dynamic>>(key);
       return value ?? defaultValue;
@@ -146,7 +152,10 @@ class RodRemoteConfig {
   /// @param key The key whose value is to be retrieved.
   /// @param defaultValue The default value to return if the key does not exist or an error occurs.
   /// @returns A Future that resolves to the value associated with the key, or the default value if the key does not exist or an error occurs.
-  Future<List<dynamic>> getListValueDefault(String key, List<dynamic> defaultValue) async {
+  Future<List<dynamic>> getListValueDefault(
+    String key,
+    List<dynamic> defaultValue,
+  ) async {
     try {
       final value = await _getValue<List<dynamic>>(key);
       return value ?? defaultValue;
@@ -155,10 +164,10 @@ class RodRemoteConfig {
     }
   }
 
-///  Retrieves the value associated with the given key from the remote configuration data.
-/// @param key The key whose value is to be retrieved.
-/// @returns A Future that resolves to the value associated with the key, or null if the key does not exist or an error occurs.
-/// @throws Exception if there is an error while retrieving the value.
+  ///  Retrieves the value associated with the given key from the remote configuration data.
+  /// @param key The key whose value is to be retrieved.
+  /// @returns A Future that resolves to the value associated with the key, or null if the key does not exist or an error occurs.
+  /// @throws Exception if there is an error while retrieving the value.
   Future<int?> getIntValue(String key) async {
     return _getValue<int>(key);
   }
@@ -207,7 +216,10 @@ class RodRemoteConfig {
     try {
       if (_file != null && await _file!.exists()) {
         final content = await _file!.readAsString();
-        final data = jsonDecode(content.isNotEmpty ? content : '{}');
+        final decodedContent = jsonDecode(content.isNotEmpty ? content : '{}');
+        final data = decodedContent['data'] != null
+            ? jsonDecode(decodedContent['data'])
+            : {};
         if (data.containsKey(key)) {
           return data[key] as T?;
         }
