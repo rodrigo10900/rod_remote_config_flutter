@@ -7,12 +7,12 @@ import 'entities.dart';
 
 /// A Calculator.
 class RodRemoteConfig {
-  final String configUrl;
-  final Duration cacheDuration;
+  String? _configUrl;
+  Duration? _cacheDuration;
   final List<CollectionSchema> schemas = [RemoteConfigDataEntSchema];
   late final Future<Isar> _db;
 
-  RodRemoteConfig({required this.configUrl, required this.cacheDuration}) {
+  RodRemoteConfig() {
     _db = _openDb();
   }
 
@@ -27,7 +27,9 @@ class RodRemoteConfig {
   /// Fetches the remote configuration data from the specified URL and stores it in the local database.
   /// If the data is already present and the cache duration has not expired, it will not fetch the data again.
   /// @returns A Future that resolves to true if the data was fetched and stored, or false if the data was already present and the cache duration has not expired.  
-  Future<bool> fetchConfig() async {
+  Future<bool> fetchConfig({required String configUrl, required Duration cacheDuration}) async {
+    _configUrl = configUrl;
+    _cacheDuration = cacheDuration;
     final isar = await _db;
     final Dio dio = Dio(
       BaseOptions(
@@ -37,15 +39,14 @@ class RodRemoteConfig {
       ),
     );
     try {
-      final responseString = await dio.get(configUrl);
-      jsonDecode(responseString.data);
+      final responseString = await dio.get(_configUrl!);
       final remoteConfigData = RemoteConfigDataEnt()
         ..timestamp = DateTime.now().millisecondsSinceEpoch
-        ..data = responseString.data.toString();
+        ..data = jsonEncode(responseString.data);
       final existingConfig = await isar.remoteConfigDataEnts
           .where()
           .findFirst();
-      final durationInMillis = cacheDuration.inMilliseconds;
+      final durationInMillis = _cacheDuration!.inMilliseconds;
       if (existingConfig != null) {
         final timeDifference =
             DateTime.now().millisecondsSinceEpoch -
@@ -66,6 +67,8 @@ class RodRemoteConfig {
       throw Exception(
         message,
       );
+    } finally {
+      dio.close();
     }
     return true; 
   }
