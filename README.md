@@ -37,8 +37,11 @@ final result = await remoteConfig.fetchConfig(
         cacheDuration: Duration.zero);
 // Use your data config:
 final friends = await remoteConfig.getListValue('friends');
+
+// Use your data with a default value:
+final friends = await remoteConfig.getStringValueDefault('name', 'Default name');
 ```
 
 ## Additional information
 
-If you are using Isar Database in your project you have to use the same library version used in this package to avoid errors. The version used is 3.3.0
+The json is saved in a plain text file. 
