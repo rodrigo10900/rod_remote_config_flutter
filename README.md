@@ -11,29 +11,34 @@ and the Flutter guide for
 [developing packages and plugins](https://flutter.dev/to/develop-packages).
 -->
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+Hi, this is a simple library to replace Firebase Remote Config. 
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+Sync data from a json file in your server, store date on a local database and then use it in your app in a simple way.
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+Download the code and make a reference in the pubspect.yaml file:
+```yaml
+rod_remote_config:
+    path: your_path/rod_remote_config_flutter
+```
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
+Create an instance of RodRemoteConfig and fetch config
 to `/example` folder.
 
 ```dart
-const like = 'sample';
+final remoteConfig = RodRemoteConfig();
+final result = await remoteConfig.fetchConfig(
+        configUrl: "https://yourfile.json",
+        cacheDuration: Duration.zero);
+// Use your data config:
+final friends = await remoteConfig.getListValue('friends');
 ```
 
 ## Additional information
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+If you are using Isar Database in your project you have to use the same library version used in this package to avoid errors. The version used is 3.3.0
