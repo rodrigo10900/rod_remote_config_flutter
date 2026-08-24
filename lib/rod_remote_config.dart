@@ -66,13 +66,27 @@ class RodRemoteConfig {
       }
     } catch (e) {
       if (e is DioException) {
+        if (_file != null && await _file!.exists()) {
+          final content = await _file!.readAsString();
+          final decodedContent = jsonDecode(
+            content.isNotEmpty ? content : '{}',
+          );
+          final data = decodedContent['data'] != null
+              ? jsonDecode(decodedContent['data'])
+              : {};
+          if (data.isNotEmpty) {
+            return false;
+          }
+        }
         if (e.type == DioExceptionType.connectionTimeout ||
             e.type == DioExceptionType.receiveTimeout) {
           throw RodRemoteConfigFetchException(
-              "Error de conexión: No se pudo conectar al servidor de configuración remota.");
+            "Error de conexión: No se pudo conectar al servidor de configuración remota.",
+          );
         } else if (e.type == DioExceptionType.badResponse) {
           throw RodRemoteConfigFetchException(
-              "Error en la respuesta del servidor: ${e.response?.statusCode} ${e.response?.statusMessage}");
+            "Error en la respuesta del servidor: ${e.response?.statusCode} ${e.response?.statusMessage}",
+          );
         }
         return false;
       }
@@ -237,7 +251,9 @@ class RodRemoteConfig {
         }
       }
     } catch (e) {
-      throw RodRemoteConfigKeyNotFoundException('Error al obtener el valor para la clave "$key": $e');
+      throw RodRemoteConfigKeyNotFoundException(
+        'Error al obtener el valor para la clave "$key": $e',
+      );
     }
     return null;
   }
