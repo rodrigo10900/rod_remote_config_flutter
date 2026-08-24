@@ -4,10 +4,11 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rod_remote_config/entities.dart';
+import 'package:rod_remote_config/exceptions.dart';
 
 /// A Calculator.
 class RodRemoteConfig {
-  static const FILE_NAME = 'rod_remote_config_data.json';
+  static const fileName = 'rod_remote_config_data.json';
   String? _configUrl;
   Duration? _cacheDuration;
   File? _file;
@@ -22,7 +23,7 @@ class RodRemoteConfig {
 
   Future<File?> _openFile() async {
     final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/$FILE_NAME');
+    final file = File('${dir.path}/$fileName');
     if (!await file.exists()) {
       await file.create();
     }
@@ -64,10 +65,21 @@ class RodRemoteConfig {
         await _file?.writeAsString(remoteConfigData.toJson());
       }
     } catch (e) {
+      if (e is DioException) {
+        if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout) {
+          throw RodRemoteConfigFetchException(
+              "Error de conexión: No se pudo conectar al servidor de configuración remota.");
+        } else if (e.type == DioExceptionType.badResponse) {
+          throw RodRemoteConfigFetchException(
+              "Error en la respuesta del servidor: ${e.response?.statusCode} ${e.response?.statusMessage}");
+        }
+        return false;
+      }
       final message = e is FormatException
           ? "Error de formato en el archivo de configuración JSON: ${e.message}"
           : e.toString();
-      throw Exception(message);
+      throw RodRemoteConfigParseException(message);
     } finally {
       dio.close();
     }
@@ -225,7 +237,7 @@ class RodRemoteConfig {
         }
       }
     } catch (e) {
-      throw Exception('Error al obtener el valor para la clave "$key": $e');
+      throw RodRemoteConfigKeyNotFoundException('Error al obtener el valor para la clave "$key": $e');
     }
     return null;
   }
